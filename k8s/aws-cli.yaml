@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aws-cli-0
+  labels:
+    app: aws-cli-0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aws-cli-0
+  template:
+    metadata:
+      labels:
+        app: aws-cli-0
+    spec:
+      serviceAccountName: aws-cli-0
+      containers:
+        - name: aws-cli-0
+          image: amazon/aws-cli:2.27.55
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "--- start ---"
+              aws s3 ls
+              echo "--- end ---"
+              sleep 600
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aws-cli-0
+  # annotations:
+  #   eks.amazonaws.com/role-arn: "arn:aws:iam::000000000000:role/eks-irsa-s3-access-role"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aws-cli-1
+  labels:
+    app: aws-cli-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aws-cli-1
+  template:
+    metadata:
+      labels:
+        app: aws-cli-1
+    spec:
+      serviceAccountName: aws-cli-1
+      containers:
+        - name: aws-cli-1
+          image: amazon/aws-cli:2.27.55
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 100m
+              memory: 256Mi
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              echo "--- start ---"
+              aws ec2 describe-instances --output=table --query 'Reservations[].Instances[].{id:InstanceId,name:Tags[?Key==`Name`].Value|[0]}'
+              echo "--- end ---"
+              sleep 600
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aws-cli-1
