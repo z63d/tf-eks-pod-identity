@@ -1,4 +1,16 @@
 data "aws_iam_policy_document" "pod_identity_assume_role" {
+  # Assume role for EC2 instances
+  # statement {
+  #   effect = "Allow"
+  #   principals {
+  #     type        = "Service"
+  #     identifiers = ["ec2.amazonaws.com"]
+  #   }
+  #   actions = [
+  #     "sts:AssumeRole"
+  #   ]
+  # }
+
   # IRSA
   # statement {
   #   effect = "Allow"
