@@ -3,7 +3,7 @@
 ```sh
 AWS_PROFILE=example
 aws sso login
-aws eks update-kubeconfig --region ap-northeast-1 --name kaita-self-mng --profile example
+aws eks update-kubeconfig --region ap-northeast-1 --name kaita-self-mng --profile $AWS_PROFILE
 ```
 
 ```sh
