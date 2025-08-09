@@ -31,9 +31,17 @@ module "eks" {
       max_size     = 1
       desired_size = 1
 
-      # iam_role_additional_policies = {
-      #   AmazonS3ReadOnlyAccess = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
-      # }
+      iam_role_additional_policies = {
+        AmazonS3ReadOnlyAccess = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+        AmazonEC2ReadOnlyAcces = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
+      }
+
+      metadata_options = {
+        http_endpoint               = "enabled"
+        http_tokens                 = "required"
+        http_put_response_hop_limit = 1
+        instance_metadata_tags      = "disabled"
+      }
     }
   }
 
