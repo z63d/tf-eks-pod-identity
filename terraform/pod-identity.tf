@@ -127,3 +127,44 @@ resource "aws_eks_pod_identity_association" "aws_cli_1" {
   service_account = "aws-cli-1"
   role_arn        = aws_iam_role.aws_cli_1_sa.arn
 }
+
+# =====================================
+# アプリケーション → カスタマーRole の多段Assume Role構成
+# =====================================
+
+data "aws_iam_policy_document" "assume_role_to_customer_role_permissions" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole"
+    ]
+    resources = [
+      aws_iam_role.customer.arn # "*" で全てのカスタマーRoleを対象にできる
+    ]
+  }
+}
+
+resource "aws_iam_policy" "assume_role_to_customer_role_permissions" {
+  name        = "${var.prefix}-assume-role-to-customer-role-permissions"
+  description = "Allows application to assume customer roles"
+  policy      = data.aws_iam_policy_document.assume_role_to_customer_role_permissions.json
+}
+
+resource "aws_iam_role" "application_sa" {
+  name               = "${var.prefix}-application-sa"
+  assume_role_policy = data.aws_iam_policy_document.trust_pod_identity.json
+}
+
+resource "aws_iam_role_policy_attachment" "assume_role_to_customer_role_permissions_2_application_sa" {
+  role       = aws_iam_role.application_sa.name
+  policy_arn = aws_iam_policy.assume_role_to_customer_role_permissions.arn
+}
+
+resource "aws_eks_pod_identity_association" "application" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "default"
+  service_account = "application"
+  role_arn        = aws_iam_role.application_sa.arn
+
+  disable_session_tags = false # セッションタグを無効化することで、Assume Role時に不要なタグが付与されないようにする
+}
