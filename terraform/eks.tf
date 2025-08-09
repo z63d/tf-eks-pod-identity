@@ -2,7 +2,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"
 
-  name               = var.name
+  name               = "${var.prefix}-self-mng"
   kubernetes_version = "1.33"
 
   addons = {

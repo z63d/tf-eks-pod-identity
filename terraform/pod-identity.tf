@@ -59,6 +59,22 @@ data "aws_iam_policy_document" "s3_access" {
   }
 }
 
+resource "aws_iam_policy" "s3_access" {
+  name        = "${var.prefix}-s3-access"
+  description = "IAM policy for S3 access"
+  policy      = data.aws_iam_policy_document.s3_access.json
+}
+
+resource "aws_iam_role" "sa_aws_cli_0" {
+  name               = "${var.prefix}-sa-aws-cli-0"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "s3_access_2_aws_cli_0" {
+  role       = aws_iam_role.sa_aws_cli_0.name
+  policy_arn = aws_iam_policy.s3_access.arn
+}
+
 data "aws_iam_policy_document" "ec2_access" {
   statement {
     effect = "Allow"
@@ -74,48 +90,32 @@ data "aws_iam_policy_document" "ec2_access" {
   }
 }
 
-resource "aws_iam_policy" "s3_access" {
-  name        = "eks-s3-access-policy"
-  description = "IAM policy for S3 access"
-  policy      = data.aws_iam_policy_document.s3_access.json
-}
-
 resource "aws_iam_policy" "ec2_access" {
-  name        = "eks-ec2-access-policy"
+  name        = "${var.prefix}-ec2-access"
   description = "IAM policy for EKS to access EC2"
   policy      = data.aws_iam_policy_document.ec2_access.json
 }
 
-resource "aws_iam_role" "s3_access" {
-  name               = "eks-s3-access-role"
+resource "aws_iam_role" "sa_aws_cli_1" {
+  name               = "${var.prefix}-sa-aws-cli-1"
   assume_role_policy = data.aws_iam_policy_document.pod_identity_assume_role.json
 }
 
-resource "aws_iam_role" "ec2_access" {
-  name               = "eks-ec2-access-role"
-  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume_role.json
-}
-
-resource "aws_iam_role_policy_attachment" "s3_access" {
-  role       = aws_iam_role.s3_access.name
-  policy_arn = aws_iam_policy.s3_access.arn
-}
-
-resource "aws_iam_role_policy_attachment" "ec2_access" {
-  role       = aws_iam_role.ec2_access.name
+resource "aws_iam_role_policy_attachment" "ec2_access_2_sa_aws_cli_1" {
+  role       = aws_iam_role.sa_aws_cli_1.name
   policy_arn = aws_iam_policy.ec2_access.arn
 }
 
-resource "aws_eks_pod_identity_association" "s3_access" {
+resource "aws_eks_pod_identity_association" "aws_cli_0" {
   cluster_name    = module.eks.cluster_name
   namespace       = "default"
   service_account = "aws-cli-0"
-  role_arn        = aws_iam_role.s3_access.arn
+  role_arn        = aws_iam_role.sa_aws_cli_0.arn
 }
 
-resource "aws_eks_pod_identity_association" "ec2_access" {
+resource "aws_eks_pod_identity_association" "aws_cli_1" {
   cluster_name    = module.eks.cluster_name
   namespace       = "default"
   service_account = "aws-cli-1"
-  role_arn        = aws_iam_role.ec2_access.arn
+  role_arn        = aws_iam_role.sa_aws_cli_1.arn
 }

@@ -6,7 +6,7 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 6.0"
 
-  name = var.name
+  name = "${var.prefix}-self-mng"
   cidr = var.vpc_cidr
 
   azs             = local.azs

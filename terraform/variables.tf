@@ -15,9 +15,9 @@ variable "aws_tags" {
   }
 }
 
-variable "name" {
+variable "prefix" {
   type    = string
-  default = "kaita-self-mng"
+  default = "kaita"
 }
 
 variable "vpc_cidr" {
