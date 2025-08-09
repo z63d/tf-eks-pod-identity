@@ -1,4 +1,4 @@
-data "aws_iam_policy_document" "pod_identity_assume_role" {
+data "aws_iam_policy_document" "trust_pod_identity" {
   # Assume role for EC2 instances
   # statement {
   #   effect = "Allow"
@@ -69,13 +69,13 @@ resource "aws_iam_policy" "s3_access" {
   policy      = data.aws_iam_policy_document.s3_access.json
 }
 
-resource "aws_iam_role" "sa_aws_cli_0" {
-  name               = "${var.prefix}-sa-aws-cli-0"
-  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume_role.json
+resource "aws_iam_role" "aws_cli_0_sa" {
+  name               = "${var.prefix}-aws-cli-0-sa"
+  assume_role_policy = data.aws_iam_policy_document.trust_pod_identity.json
 }
 
-resource "aws_iam_role_policy_attachment" "s3_access_2_aws_cli_0" {
-  role       = aws_iam_role.sa_aws_cli_0.name
+resource "aws_iam_role_policy_attachment" "s3_access_2_aws_cli_0_sa" {
+  role       = aws_iam_role.aws_cli_0_sa.name
   policy_arn = aws_iam_policy.s3_access.arn
 }
 
@@ -83,7 +83,7 @@ resource "aws_eks_pod_identity_association" "aws_cli_0" {
   cluster_name    = module.eks.cluster_name
   namespace       = "default"
   service_account = "aws-cli-0"
-  role_arn        = aws_iam_role.sa_aws_cli_0.arn
+  role_arn        = aws_iam_role.aws_cli_0_sa.arn
 }
 
 # =====================================
@@ -111,13 +111,13 @@ resource "aws_iam_policy" "ec2_access" {
   policy      = data.aws_iam_policy_document.ec2_access.json
 }
 
-resource "aws_iam_role" "sa_aws_cli_1" {
-  name               = "${var.prefix}-sa-aws-cli-1"
-  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume_role.json
+resource "aws_iam_role" "aws_cli_1_sa" {
+  name               = "${var.prefix}-aws-cli-1-sa"
+  assume_role_policy = data.aws_iam_policy_document.trust_pod_identity.json
 }
 
-resource "aws_iam_role_policy_attachment" "ec2_access_2_sa_aws_cli_1" {
-  role       = aws_iam_role.sa_aws_cli_1.name
+resource "aws_iam_role_policy_attachment" "ec2_access_2_aws_cli_1_sa" {
+  role       = aws_iam_role.aws_cli_1_sa.name
   policy_arn = aws_iam_policy.ec2_access.arn
 }
 
@@ -125,5 +125,5 @@ resource "aws_eks_pod_identity_association" "aws_cli_1" {
   cluster_name    = module.eks.cluster_name
   namespace       = "default"
   service_account = "aws-cli-1"
-  role_arn        = aws_iam_role.sa_aws_cli_1.arn
+  role_arn        = aws_iam_role.aws_cli_1_sa.arn
 }
