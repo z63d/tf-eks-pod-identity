@@ -44,6 +44,10 @@ data "aws_iam_policy_document" "pod_identity_assume_role" {
   }
 }
 
+# =====================================
+# aws-cli-0
+# =====================================
+
 data "aws_iam_policy_document" "s3_access" {
   statement {
     effect = "Allow"
@@ -75,6 +79,17 @@ resource "aws_iam_role_policy_attachment" "s3_access_2_aws_cli_0" {
   policy_arn = aws_iam_policy.s3_access.arn
 }
 
+resource "aws_eks_pod_identity_association" "aws_cli_0" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "default"
+  service_account = "aws-cli-0"
+  role_arn        = aws_iam_role.sa_aws_cli_0.arn
+}
+
+# =====================================
+# aws-cli-1
+# =====================================
+
 data "aws_iam_policy_document" "ec2_access" {
   statement {
     effect = "Allow"
@@ -104,13 +119,6 @@ resource "aws_iam_role" "sa_aws_cli_1" {
 resource "aws_iam_role_policy_attachment" "ec2_access_2_sa_aws_cli_1" {
   role       = aws_iam_role.sa_aws_cli_1.name
   policy_arn = aws_iam_policy.ec2_access.arn
-}
-
-resource "aws_eks_pod_identity_association" "aws_cli_0" {
-  cluster_name    = module.eks.cluster_name
-  namespace       = "default"
-  service_account = "aws-cli-0"
-  role_arn        = aws_iam_role.sa_aws_cli_0.arn
 }
 
 resource "aws_eks_pod_identity_association" "aws_cli_1" {
