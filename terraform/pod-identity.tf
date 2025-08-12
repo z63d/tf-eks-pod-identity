@@ -168,3 +168,105 @@ resource "aws_eks_pod_identity_association" "application" {
 
   disable_session_tags = false # セッションタグを無効化することで、Assume Role時に不要なタグが付与されないようにする
 }
+
+# =====================================
+# Multi-Tenant ABAC Demo - tenant isolation
+# =====================================
+
+data "aws_iam_policy_document" "tenant_abac" {
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.tenant_shared.arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/kubernetes-service-account"
+      values   = ["tenant-a-app"]
+    }
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = ["tenant-a/*"]
+    }
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject"
+    ]
+    resources = ["${aws_s3_bucket.tenant_shared.arn}/tenant-a/*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/kubernetes-service-account"
+      values   = ["tenant-a-app"]
+    }
+  }
+
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.tenant_shared.arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/kubernetes-service-account"
+      values   = ["tenant-b-app"]
+    }
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = ["tenant-b/*"]
+    }
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject"
+    ]
+    resources = ["${aws_s3_bucket.tenant_shared.arn}/tenant-b/*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/kubernetes-service-account"
+      values   = ["tenant-b-app"]
+    }
+  }
+}
+
+resource "aws_iam_policy" "tenant_abac" {
+  name        = "${var.prefix}-tenant-abac-policy"
+  description = "Multi-tenant ABAC policy"
+  policy      = data.aws_iam_policy_document.tenant_abac.json
+}
+
+resource "aws_iam_role" "tenant_shared" {
+  name               = "${var.prefix}-tenant-shared"
+  assume_role_policy = data.aws_iam_policy_document.trust_pod_identity.json
+}
+
+resource "aws_iam_role_policy_attachment" "tenant_abac_2_tenant_shared" {
+  role       = aws_iam_role.tenant_shared.name
+  policy_arn = aws_iam_policy.tenant_abac.arn
+}
+
+resource "aws_eks_pod_identity_association" "tenant_a" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "default"
+  service_account = "tenant-a-app"
+  role_arn        = aws_iam_role.tenant_shared.arn
+}
+
+resource "aws_eks_pod_identity_association" "tenant_b" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "default"
+  service_account = "tenant-b-app"
+  role_arn        = aws_iam_role.tenant_shared.arn
+}

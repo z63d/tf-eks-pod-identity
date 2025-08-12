@@ -62,6 +62,18 @@ data "aws_iam_policy_document" "customer_permissions" {
       aws_s3_bucket.customer.arn,
       "${aws_s3_bucket.customer.arn}/*"
     ]
+
+    # ABAC
+    condition {
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/kubernetes-service-account"
+      values   = ["application"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "aws:PrincipalTag/kubernetes-namespace"
+      values   = ["default"]
+    }
   }
 }
 
