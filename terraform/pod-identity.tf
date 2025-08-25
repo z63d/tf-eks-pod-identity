@@ -139,7 +139,7 @@ data "aws_iam_policy_document" "assume_role_to_customer_role_permissions" {
       "sts:AssumeRole"
     ]
     resources = [
-      aws_iam_role.customer.arn # "*" で全てのカスタマーRoleを対象にできる
+      "*" # "*" で全てのカスタマーRoleを対象にできる
     ]
   }
 }
@@ -269,4 +269,66 @@ resource "aws_eks_pod_identity_association" "tenant_b" {
   namespace       = "default"
   service_account = "tenant-b-app"
   role_arn        = aws_iam_role.tenant_shared.arn
+}
+
+# =====================================
+# ABAC Demo - Secrets Manager
+# =====================================
+
+resource "aws_secretsmanager_secret" "app_secret" {
+  name                    = "${var.prefix}-app-secret"
+  description             = "Secret for EKS pod access"
+  recovery_window_in_days = 7
+
+  tags = {
+    kubernetes-namespace = "secret-demo"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "app_secret" {
+  secret_id = aws_secretsmanager_secret.app_secret.id
+  secret_string = jsonencode({
+    username = "admin"
+    password = "Password01234"
+  })
+}
+
+data "aws_iam_policy_document" "secretsmanager_access" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:DescribeSecret"
+    ]
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "secretsmanager:ResourceTag/kubernetes-namespace"
+      values   = ["$${aws:PrincipalTag/kubernetes-namespace}"]
+    }
+  }
+}
+
+resource "aws_iam_policy" "secretsmanager_access" {
+  name        = "${var.prefix}-secretsmanager-access"
+  description = "ABAC policy for Secrets Manager access"
+  policy      = data.aws_iam_policy_document.secretsmanager_access.json
+}
+
+resource "aws_iam_role" "secret_app_sa" {
+  name               = "${var.prefix}-secret-app-sa"
+  assume_role_policy = data.aws_iam_policy_document.trust_pod_identity.json
+}
+
+resource "aws_iam_role_policy_attachment" "secretsmanager_access_2_secret_app_sa" {
+  role       = aws_iam_role.secret_app_sa.name
+  policy_arn = aws_iam_policy.secretsmanager_access.arn
+}
+
+resource "aws_eks_pod_identity_association" "secretsmgr_app" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "secret-demo"
+  service_account = "secret-app"
+  role_arn        = aws_iam_role.secret_app_sa.arn
 }

@@ -75,3 +75,35 @@ aws s3 cp s3://${aws_s3_bucket.tenant_shared.bucket}/tenant-a/data.txt -
 # - 各テナントは自分専用ディレクトリのみアクセス可能
 EOF
 }
+
+output "abac_demo_test_commands" {
+  description = "Test commands for ABAC demo using Secrets Manager"
+  value       = <<EOF
+# ABAC Demo - Secrets Manager Access Control
+# ABAC制御によりnamespace tagが一致するPodのみがsecretにアクセス可能
+
+# === Secret Demo Pod テスト ===
+# kubectl exec -it deployment/secrets-app -n secret-demo -- /bin/sh で実行
+
+# 1. 現在の認証情報を確認
+aws sts get-caller-identity
+
+# 2. ABAC制御されたsecretの取得（成功：namespace tagが一致）
+aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.app_secret.name} --region ap-northeast-1
+
+# 3. secretの詳細情報を確認（成功：DescribeSecret権限あり）
+aws secretsmanager describe-secret --secret-id ${aws_secretsmanager_secret.app_secret.name} --region ap-northeast-1
+
+# === 他のnamespaceからのアクセステスト（失敗例） ===
+# 異なるnamespaceのPodからアクセスした場合はAccessDenied
+
+# kubernetes-namespaceタグが "secret-demo" 以外のPodからアクセス
+# → AccessDenied (ABAC制御により拒否)
+
+# === ABAC制御の仕組み ===
+# - Secrets Manager resource tag: kubernetes-namespace = "secret-demo"  
+# - Pod principal tag: kubernetes-namespace = "secret-demo"
+# - 条件: secretsmanager:ResourceTag/kubernetes-namespace == aws:PrincipalTag/kubernetes-namespace
+# - 結果: タグが一致するPodのみアクセス許可
+EOF
+}
